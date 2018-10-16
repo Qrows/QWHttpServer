@@ -158,8 +158,110 @@ double search_weight_from_mime(char *accept, char *mime)
 bool is_keep_alive(char *connection)
 {
 	char *KEEP_ALIVE = "Keep-Alive";
+	if (connection == NULL)
+		return false;
 	// trim whitespace
 	while (*connection != '\0' && *connection != ' ')
 		++connection;
 	return strncmp(connection, KEEP_ALIVE, strlen(KEEP_ALIVE)) == 0;
+}
+
+static char *get_status_line(enum status_code code)
+{
+	switch(code) {
+	case HTTP_OK:
+		return "HTTP/1.1 200 OK\r\n";
+	case HTTP_BAD_REQUEST:
+		return "HTTP/1.1 402 BAD REQUEST\r\n";
+	case HTTP_NOT_FOUND:
+		return "HTTP/1.1 404 NOT FOUND\r\n";
+	case HTTP_INTERNAL_SERVER_ERROR:
+		return "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
+	default:
+		return NULL;
+	}
+}
+
+static ssize_t write_header(char *buf, size_t buf_size, const char *name, const char *value)
+{
+	size_t name_len = 0;
+	size_t value_len = 0;
+	size_t len = 0;
+	if (buf == NULL || name == NULL || value == NULL)
+		return -1;
+	name_len = strlen(name);
+	value_len = strlen(value);
+	len = name_len + 2 + value_len + CRLF_LEN;
+	if (len > buf_size)
+		return -1;
+	strcpy(buf, name);
+	strcat(buf, ": ");
+	strcat(buf, value);
+	strcat(buf, CRLF);
+	return len;
+}
+
+static int write_date(char *buf, size_t buf_size)
+{
+	char date[1024] = {0};
+	time_t current_time = 0;
+	struct tm *local = NULL;
+	int err = 0;
+	char *ptr = NULL;
+	if (buf == NULL)
+		return -1;
+	current_time = time(NULL);
+	local = gmtime(&current_time);
+	err = snprintf(date, 1024, "%s", asctime(local));
+	if (err > 1024) // extremely unlikely 
+		return -1;
+	ptr = strchr(date, '\n');
+	if (ptr == NULL) // should never happen
+		return -1;
+	*ptr = '\0';
+	return write_header(buf, buf_size, "Date", date);
+}
+
+size_t generate_response_header(char *buf,
+				size_t buf_size,
+				enum status_code code,
+				const char *content_type,
+				const char *content_lenght)
+{
+	char *status_line = NULL;
+	size_t len = 0;
+	ssize_t err = 0;
+	if (buf == NULL)
+		return -1;
+	status_line = get_status_line(code);
+	len = strlen(status_line);
+	if (len > buf_size)
+		return 0;
+	memcpy(buf, status_line, len);
+	err = write_date(buf + len, buf_size - len);
+	len += err;
+	if (err < 0)
+		return 0;
+	if (content_type) {
+		err = write_header(buf + len,
+				   buf_size - len,
+				   "Content-Type",
+				   content_type);
+		if (err < 0)
+			return 0;
+		len += err;
+	}
+
+	if (content_lenght) {
+		err = write_header(buf + len,
+				   buf_size - len,
+				   "Content-Lenght",
+				   content_lenght);
+		if (err < 0)
+			return 0;
+		len += err;
+	}
+	return len;
+	
+	
 }
