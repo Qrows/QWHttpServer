@@ -1,7 +1,5 @@
 #include "http.h"
 
-#include <stdio.h>
-
 struct http_session *http_session_create(struct CONNECTION_attr *attr,
 					 int timeout,
 					 size_t request_size,
@@ -143,21 +141,25 @@ double search_weight_from_mime(char *accept, char *mime)
 	found = strstr(accept, mime);
 	if (found == NULL)
 		return -1;
-	fprintf(stderr, "%s found in %s\n", mime, accept);
 	column = strchr(found, ';');
 	if (column == NULL)
 		return -1;
-	fprintf(stderr, "found ;\n");
 	comma = strchr(found, ',');
 	if (comma != NULL && column > comma)
 		return -1;
-	fprintf(stderr, "after , check\n");
-	fprintf(stderr, "try locking for q= in %s\n", column + 1);
 	if (strncmp(column + 1, "q=", 2) != 0)
 		return -1;
-	fprintf(stderr, "found q=\n");
 	weight = strtod(column + 3, &error_ptr);
 	if (error_ptr == NULL)
 		return -1;
 	return weight;
+}
+
+bool is_keep_alive(char *connection)
+{
+	char *KEEP_ALIVE = "Keep-Alive";
+	// trim whitespace
+	while (*connection != '\0' && *connection != ' ')
+		++connection;
+	return strncmp(connection, KEEP_ALIVE, strlen(KEEP_ALIVE)) == 0;
 }

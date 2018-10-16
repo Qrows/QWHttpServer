@@ -2,6 +2,8 @@
 #define HTTP_H
 
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include "connection.h"
 
 #ifndef CRLF
@@ -38,5 +40,6 @@ int http_start_connection(struct http_session *session);
 int read_http_request(struct http_session *session);
 int parse_http_request(char *raw, struct http_request *req);
 double search_weight_from_mime(char *accept, char *mime);
+bool is_keep_alive(char *connection);
 
 #endif
