@@ -22,10 +22,12 @@ struct http_request {
 	char *connection;
 };
 
-enum status_code {HTTP_OK = 200,
-		  HTTP_BAD_REQUEST = 402,
-		  HTTP_NOT_FOUND = 404,
-		  HTTP_INTERNAL_SERVER_ERROR = 500};
+enum status_code {
+	HTTP_OK = 200,
+	HTTP_BAD_REQUEST = 402,
+	HTTP_NOT_FOUND = 404,
+	HTTP_INTERNAL_SERVER_ERROR = 500
+};
 
 struct http_session {
 	struct CONNECTION_attr *attr;
@@ -44,14 +46,15 @@ struct http_session *http_session_create(struct CONNECTION_attr *attr,
 					 size_t response_size);
 void http_session_destroy(struct http_session *session);
 int http_start_connection(struct http_session *session);
+int http_close_connection(struct http_session *session);
 int read_http_request(struct http_session *session);
 int parse_http_request(char *raw, struct http_request *req);
-double search_weight_from_mime(char *accept, char *mime);
+double search_weight_from_mime(const char *accept, const char *mime);
 bool is_keep_alive(char *connection);
 size_t generate_response_header(char *response,
 				size_t response_size,
 				enum status_code code,
 				const char *content_type,
 				const char *content_lenght);
-
+void reset_http_session(struct http_session *session);
 #endif

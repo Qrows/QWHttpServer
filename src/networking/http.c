@@ -49,6 +49,22 @@ int http_start_connection(struct http_session *session)
 	return 0;
 }
 
+int http_close_connection(struct http_session *session)
+{
+	if (session == NULL)
+		return -1;
+	return cclose(session->connection, O_RDWR);
+}
+
+void reset_http_session(struct http_session *session)
+{
+	if (session == NULL)
+		return;
+	memset(session->request, 0, session->request_size);
+	memset(session->response, 0, session->response_size);
+	memset(&session->req, 0, sizeof(session->req));
+}
+
 int read_http_request(struct http_session *session)
 {
 	ssize_t rd = 0;
@@ -61,9 +77,9 @@ int read_http_request(struct http_session *session)
 	line = session->request;
 	while (read < session->request_size) {
 		rd = crecvline(session->connection,
-				 line,
-				 session->request_size - read,
-				 session->timeout);
+			       line,
+			       session->request_size - read,
+			       session->timeout);
 		if (rd < 0) {
 			return -1;
 		} if (rd == 0) {
@@ -102,11 +118,12 @@ static int parse_header(char *header, struct http_request *req)
 	name = header;
 	*ptr = '\0';
 	value = ptr + 1;
-	// todo trim optioal whitespace
+	// trim optioal whitespace
+	while (*value != '\0' && *value == ' ')
+		++value;
 	if (strcmp(name, "Accept") == 0) {
 		req->accept = value;
-	}
-	if (strcmp(name, "Connection") == 0) {
+	} else if (strcmp(name, "Connection") == 0) {
 		req->connection = value;
 	}
 	return 0;
@@ -129,7 +146,7 @@ int parse_http_request(char *raw, struct http_request *req)
 	return 0;
 }
 
-double search_weight_from_mime(char *accept, char *mime)
+double search_weight_from_mime(const char *accept, const char *mime)
 {
 	char *found = NULL;
 	char *column = NULL;
@@ -261,7 +278,14 @@ size_t generate_response_header(char *buf,
 			return 0;
 		len += err;
 	}
-	return len;
+	// add ending CRLF
+	if (len + CRLF_LEN < buf_size) {
+		strncpy(buf + len, CRLF, CRLF_LEN);
+		len += 2;
+		return len;
+	} else {
+		return 0;
+	}
 	
 	
 }

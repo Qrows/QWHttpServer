@@ -1,5 +1,7 @@
 #include "connection.h"
 
+#define MAX_IP_LEN 256
+
 struct listener_socket {
 	int lsock;     /* socket listening file descriptor */
 };
@@ -70,12 +72,14 @@ CONNECTION *copen(struct CONNECTION_attr *attr)
 		free(connection->write_buf);
 		free(connection->read_buf);
 		free(connection);
+		return NULL;
 	}
 	err = sem_init(&(connection->rmutex), 0, 1);
 	if (err < 0) {
 		free(connection->write_buf);
 		free(connection->read_buf);
 		free(connection);
+		return NULL;
 	}
 	if (attr->socket_type == ACCEPT)
 		connection->sock = accept(attr->listener->lsock,
@@ -339,5 +343,9 @@ ssize_t crecvline(CONNECTION *connect, char *buf, size_t n, int timeout)
     *buf = '\0';
     /* return number of read bytes*/
     return totRead;
+}
 
+int cgetpeername(const CONNECTION *connection, struct sockaddr *address, socklen_t *address_len)
+{
+	return getpeername(connection->sock, address, address_len);
 }
