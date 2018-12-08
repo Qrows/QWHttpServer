@@ -1,4 +1,6 @@
 #include "connection.h"
+#include <stdio.h>
+
 
 #define MAX_IP_LEN 256
 
@@ -124,8 +126,8 @@ static ssize_t
 crecv_notsync(CONNECTION *connect, char *buf, size_t n, int timeout)
 {
 	int ready = 0;
-	struct timeval tm_out;
-	fd_set read_set;
+	struct timeval tm_out = {0};
+	fd_set read_set = {0};
 	// read first from buffered read
 	if (connect->to_read_size != 0) {
 		if (connect->to_read_size > n) {
@@ -302,50 +304,58 @@ ssize_t csendfile(CONNECTION *connect, char *fpath, size_t file_size)
 
 ssize_t crecvline(CONNECTION *connect, char *buf, size_t n, int timeout)
 {
-    size_t totRead = 0;
-    ssize_t numRead = 0;
-    char ch = 0;
+	size_t totRead = 0;
+	ssize_t numRead = 0;
+	char ch = 0;
 
-    if (buf == NULL || n <= 0) {
-        errno = EINVAL;
-        return -1;
-    }
-    totRead = 0;
-    ch = 0;
-    while (ch != '\n') {
-        /* read() one bytes */
-	    numRead = crecv(connect, &ch, 1, timeout);
-        if (numRead == -1) {
-            if (errno == EINTR) {
-                /* read() interrupted by signal*/
-                continue;
-            } else {
-                /* error */
-                return -1;
-            }
-        } else if (numRead == 0) {
-            if (totRead == 0) {
-                /* 0 bytes readed */
-                return 0;
-            } else {
-                /* EOF reached*/
-                break;
-            }
-        } else {
-            /* discard any bytes over n - 1 bytes */
-            if (totRead < n - 1) {
-                *buf = ch;
-                buf++;
-                totRead++;
-            }
-        }
-    }
-    *buf = '\0';
-    /* return number of read bytes*/
-    return totRead;
+	if (buf == NULL || n <= 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	totRead = 0;
+	ch = 0;
+	while (ch != '\n') {
+		/* read() one bytes */
+		numRead = crecv(connect, &ch, 1, timeout);
+		if (numRead == -1) {
+			if (errno == EINTR) {
+				/* read() interrupted by signal*/
+				continue;
+			} else {
+				/* error */
+				return -1;
+			}
+		} else if (numRead == 0) {
+			if (totRead == 0) {
+				/* 0 bytes readed */
+				return 0;
+			} else {
+				/* EOF reached*/
+				break;
+			}
+		} else {
+			/* discard any bytes over n - 1 bytes */
+			if (totRead < n - 1) {
+				*buf = ch;
+				buf++;
+				totRead++;
+			}
+		}
+	}
+	*buf = '\0';
+	/* return number of read bytes*/
+	return totRead;
 }
 
 int cgetpeername(const CONNECTION *connection, struct sockaddr *address, socklen_t *address_len)
 {
 	return getpeername(connection->sock, address, address_len);
+}
+
+int cmasksigpipe(void)
+{
+	sigset_t sigset;
+	sigemptyset (&sigset);
+	sigaddset(&sigset, SIGPIPE);
+	return sigprocmask(SIG_BLOCK, &sigset, NULL);
 }

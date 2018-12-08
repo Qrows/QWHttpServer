@@ -6,16 +6,18 @@ connection_write_buffer 64
 # buffer size for buffered input from socket
 connection_read_buffer  64
 # server root on the file system
-server_root             /home/qrows/serverTest/root
+server_root             /home/qrows/Scrivania/serverTest/root
 # server cache folder
-server_cache            /home/qrows/serverTest/cache
+server_cache            /home/qrows/Scrivania/serverTest/cache
+# server index; redirect when / is the url
+server_index            /index.html
 # number of thread
-thread_number           1
+thread_number           10
 # max number of pending connection on the socket
-backlog                 10
+backlog                 100
 # size of an http request line
 http_max_request_size   8192
 # size of an http response line
 http_max_response_size  8192
 # timeout
-timeout 5
+timeout 1

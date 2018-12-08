@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <sys/fcntl.h>
 #include <sys/sendfile.h>
+#include <signal.h>
 #include <semaphore.h>
 #include "inet_sockets.h"
 
@@ -193,5 +194,9 @@ int cflush(CONNECTION *connect);
  */
 int cgetpeername(const CONNECTION *connection, struct sockaddr *address, socklen_t *address_len);
 
+/**
+ * cmasksigpipe - mask SIGPIPE signal
+ */
+int cmasksigpipe(void);
 
 #endif

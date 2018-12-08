@@ -12,6 +12,7 @@ struct config {
 	size_t connection_read_buffer;
 	char *server_root;
 	char *server_cache;
+	char *server_index;
 	int thread_number;
 	int backlog;
 	size_t http_max_request_size;

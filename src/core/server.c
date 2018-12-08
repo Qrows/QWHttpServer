@@ -1,4 +1,5 @@
 #include "server.h"
+#define ERRNUM_MSG_SIZE 256
 
 #define IS_GET(method) ((strcmp(method, "GET")) == 0)
 #define IS_HEAD(method) ((strcmp(method, "HEAD")) == 0)
@@ -21,7 +22,7 @@ void server_data_destroy(struct server_data *sd)
 	free(sd);
 }
 
-struct global_server_data *create_global_server_data(char *root, char *cache)
+struct global_server_data *create_global_server_data(char *root, char *cache, char *index)
 {
 	struct global_server_data *gsd = NULL;
 	struct content_proxy_settings cps = {0};
@@ -32,6 +33,7 @@ struct global_server_data *create_global_server_data(char *root, char *cache)
 		return NULL;
 	cps.root = root;
 	cps.cache = cache;
+	cps.index = index;
 	gsd->cp = create_content_proxy(&cps);
 	if (gsd->cp == NULL) {
 		free(gsd);
@@ -193,8 +195,8 @@ static int do_request(struct server_data *data)
 static bool check_connection(struct http_request *req)
 {
 	if (req->connection == NULL)
-		return false;
-	return strcmp(req->connection, "keep-alive") == 0;
+		return true;
+	return is_keep_alive(req->connection);
 }
 
 int do_http_session(struct server_data *data)
@@ -204,28 +206,32 @@ int do_http_session(struct server_data *data)
 	if (data == NULL)
 		return -1;
 	while (keep_alive) {
+		errno = 0;
 		res = read_http_request(data->session);
 		if (res < 0) {
 			server_write_err_log(data->session->connection,
-					     "failed reading http request");
+					     "failed reading http request",
+					     (int)errno);
 			return -1;
 		}
+		errno = 0;
 		res = parse_http_request(data->session->request, &data->session->req);
 		if (res < 0) {
 			send_header(data->session, HTTP_BAD_REQUEST, NULL, NULL);
 			server_write_err_log(data->session->connection,
-					     "client send bad request");
+					     "error parsing http request/bad request",
+					     (int)errno);
 			return -1;
 		}
+		errno = 0;
 		res = do_request(data);
 		if (res < 0) {
 			server_write_err_log(data->session->connection,
-					     "can't complete client request");
+					     "http request failed",
+					     (int)errno);
 			return -1;
 		}
-		syslog(LOG_DEBUG, "%s: %s\n", "Connection", data->session->req.connection);
 		keep_alive = check_connection(&data->session->req);
-		syslog(LOG_DEBUG, "%s: %s\n", "Keep-Alive", (keep_alive != 0) ? "true" : "false");
 		reset_http_session(data->session);
 	}
 	return 0;
@@ -246,13 +252,23 @@ void server_close_log(void)
 	closelog();
 }
 
-void server_write_err_log(const CONNECTION *connection, const char *str)
+void server_write_err_log(const CONNECTION *connection, const char *str, int errnum)
 {
 	struct sockaddr ip = {0};
         socklen_t ip_len = 0;
 	int res = 0;
-	if (connection == NULL || str == NULL)
+	char errnum_msg[ERRNUM_MSG_SIZE] = {0};
+	if (str == NULL)
 		return;
+	if (errnum)
+		strerror_r(errnum, errnum_msg, ERRNUM_MSG_SIZE);
+	if (connection == NULL) {
+		if (errnum)
+			syslog(LOG_ERR, "[]:%s: %s\n", errnum_msg, str);
+		else
+			syslog(LOG_ERR, "[] %s\n", str);
+		return;
+	}
 	ip_len = sizeof(ip);
 	res = cgetpeername(connection, &ip, &ip_len);
 	if (res < 0) {
@@ -262,15 +278,27 @@ void server_write_err_log(const CONNECTION *connection, const char *str)
 		struct sockaddr_in *ipv4 = (struct sockaddr_in *)&ip;
 		char s_ipv4[INET_ADDRSTRLEN] = {0};
 		inet_ntop(AF_INET, &ipv4->sin_addr, s_ipv4, INET_ADDRSTRLEN);
-		syslog(LOG_ERR, "[%s:%s] %s\n", "Client ipv4", s_ipv4, str);
+		if (errnum)
+			syslog(LOG_ERR, "[%s:%s]:%s: %s\n", "Client ipv4", s_ipv4,
+			       errnum_msg, str);
+		else
+			syslog(LOG_ERR, "[%s:%s] %s\n", "Client ipv4", s_ipv4, str);
 		
 	} else if (ip.sa_family == AF_INET6) {
 		struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)&ip;
 		char s_ipv6[INET6_ADDRSTRLEN] = {0};
 		inet_ntop(AF_INET6, &ipv6->sin6_addr, s_ipv6, INET6_ADDRSTRLEN);
-		syslog(LOG_ERR, "[%s:%s] %s\n", "Client ipv6", s_ipv6, str);
+		if (errnum)
+			syslog(LOG_ERR, "[%s:%s]:%s: %s\n", "Client ipv6", s_ipv6,
+			       errnum_msg, str);
+		else
+			syslog(LOG_ERR, "[%s:%s] %s\n", "Client ipv6", s_ipv6, str);
 	} else {
-		syslog(LOG_ERR, "[%s] %s\n", "Client not ipv4 or ipv6", str);
+
+		if (errnum)
+			syslog(LOG_ERR, "[%s]:%s: %s\n", "Unkwown ip", errnum_msg, str);
+		else
+			syslog(LOG_ERR, "[%s] %s\n", "Unkwown ip", str);
 	}
 }
 
@@ -279,12 +307,17 @@ void server_write_info_log(const CONNECTION *connection , const char *str)
 	struct sockaddr ip = {0};
         socklen_t ip_len = 0;
 	int res = 0;
-	if (connection == NULL || str == NULL)
+	if (str == NULL)
 		return;
+	if (connection == NULL) {
+		syslog(LOG_INFO, "[] %s\n", str);
+		return;
+	}
 	ip_len = sizeof(ip);
 	res = cgetpeername(connection, &ip, &ip_len);
 	if (res < 0) {
-		syslog(LOG_INFO, "[%s] %s\n", "Client Unrecognized ip", str);
+		syslog(LOG_INFO, "[%s] %s\n", "Unkwown ip", str);
+		return;
 	}
 	if (ip.sa_family == AF_INET) {
 		struct sockaddr_in *ipv4 = (struct sockaddr_in *)&ip;
@@ -298,6 +331,6 @@ void server_write_info_log(const CONNECTION *connection , const char *str)
 		inet_ntop(AF_INET6, &ipv6->sin6_addr, s_ipv6, INET6_ADDRSTRLEN);
 		syslog(LOG_INFO, "[%s:%s] %s\n", "Client ipv6", s_ipv6, str);
 	} else {
-		syslog(LOG_INFO, "[%s] %s\n", "Client not ipv4 or ipv6", str);
+		syslog(LOG_INFO, "[%s] %s\n", "Unkwown ip", str);
 	}
 }

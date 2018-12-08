@@ -34,6 +34,10 @@ static int parse_value(struct config *cfg, char *name, char *value)
 		cfg->server_cache = strdup(value);
 		if (cfg->server_cache == NULL)
 			return -1;
+	} else if (strcmp(name, "server_index") == 0) {
+		cfg->server_index = strdup(value);
+		if (cfg->server_index == NULL)
+			return -1;
 	} else if (strcmp(name, "thread_number") == 0) {
 		cfg->thread_number = strtol(value, &errptr, 10);
 		if (*errptr != '\0' || cfg->thread_number < 0)
@@ -75,6 +79,8 @@ static void clean_cfg(struct config *cfg)
 		free(cfg->server_cache);
 	if (cfg->port)
 		free(cfg->port);
+	if (cfg->server_index)
+		free(cfg->server_index);
 }
 
 static int cfg_set_default(struct config *cfg)
@@ -108,11 +114,20 @@ static int cfg_set_default(struct config *cfg)
 			return -1;
 		}
 	}
+	if (cfg->server_index == NULL) {
+		cfg->server_index = strdup("/index.html");
+		if (cfg->server_cache == NULL) {
+			free(cfg->server_root);
+			free(cfg->server_cache);
+			return -1;
+		}
+	}
 	if (cfg->port == NULL) {
 		cfg->port = strdup("80");
 		if (cfg->port == NULL) {
 			free(cfg->server_root);
 			free(cfg->server_cache);
+			free(cfg->server_index);
 			return -1;
 		}
 	}

@@ -42,7 +42,13 @@ int main(int argc, char *argv[])
 	       cfg->port,
 	       "with backlog",
 	       cfg->backlog);
-
+	res = cmasksigpipe();
+	if (res < 0) {
+		syslog(LOG_CRIT, "%s: %s\n", "cant mask SIGPIPE",
+		       strerror(errno));
+		return EXIT_FAILURE;
+	}
+		
 	listener = lcopen(cfg->port, cfg->backlog, NULL);
 	if (listener == NULL) {
 		syslog(LOG_CRIT, "%s %s\n", "can't open listening socket at port", cfg->port);
@@ -62,7 +68,9 @@ int main(int argc, char *argv[])
 	attr->addr = NULL;
 	attr->addr_len = NULL;
 	
-	global_data = create_global_server_data(cfg->server_root, cfg->server_cache);
+	global_data = create_global_server_data(cfg->server_root,
+						cfg->server_cache,
+						cfg->server_index);
 	if (global_data == NULL) {
 		syslog(LOG_EMERG, "%s\n", "can't create global server data");
 		close_listening_socket(listener);

@@ -12,24 +12,20 @@ void *threadwork(void *server_data)
 	}
 	while (true) {
 		reset_http_session(data->session);
-		syslog(LOG_INFO, "%s\n",
-		       "starting listening for incoming connection");
+		server_write_info_log(NULL, "starting new connection");
 		res = http_start_connection(data->session);
 		if (res < 0) {
-			syslog(LOG_ERR, "%s\n",
-			       "failed connecting to client");
+			server_write_err_log(data->session->connection,
+					     "failed starting connection",
+					     errno);
 			continue;
 		}
 		server_write_info_log(data->session->connection,
-				      "starting http session");
+				      "successfully established connection");
 		res = do_http_session(data);
-		if (res < 0) {
-			server_write_err_log(data->session->connection,
-					     "failed executing client request");
-		}
 		server_write_info_log(data->session->connection,
 				      "closing http session");
-		http_close_connection(data->session);					
+		http_close_connection(data->session);
 	}
 	pthread_exit(NULL);
 }

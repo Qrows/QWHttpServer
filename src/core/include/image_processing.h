@@ -7,7 +7,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "MagickWand/MagickWand.h"
+#include "wand/MagickWand.h"
 
 int compress_image(char *src, char *dest, int quality);
 

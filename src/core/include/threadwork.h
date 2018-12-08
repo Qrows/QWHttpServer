@@ -3,7 +3,9 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "http.h"
 #include "server.h"

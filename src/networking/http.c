@@ -1,3 +1,4 @@
+
 #include "http.h"
 
 struct http_session *http_session_create(struct CONNECTION_attr *attr,
@@ -82,7 +83,7 @@ int read_http_request(struct http_session *session)
 			       session->timeout);
 		if (rd < 0) {
 			return -1;
-		} if (rd == 0) {
+		} else if (rd == 0) {
 			return -1;
 		} else {
 			if (strcmp(line, CRLF) == 0)
@@ -174,11 +175,12 @@ double search_weight_from_mime(const char *accept, const char *mime)
 
 bool is_keep_alive(char *connection)
 {
-	char *KEEP_ALIVE = "Keep-Alive";
+	char *KEEP_ALIVE = "keep-alive";
+	/* RFC 2616 8.1.2 if not specified use persistent connection*/
 	if (connection == NULL)
-		return false;
+		return true;
 	// trim whitespace
-	while (*connection != '\0' && *connection != ' ')
+	while (*connection != '\0' && *connection == ' ')
 		++connection;
 	return strncmp(connection, KEEP_ALIVE, strlen(KEEP_ALIVE)) == 0;
 }

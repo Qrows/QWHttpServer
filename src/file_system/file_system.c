@@ -148,6 +148,8 @@ struct file_data *get_file_data(struct content_proxy *cp, char *url, bool from_c
 	struct file_data *file_data = NULL;
 	if (cp == NULL || url == NULL)
 		return NULL;
+	if (strlen(url) == 1 && *url == '/')
+		url = cp->index;
 	path = get_true_file_path(cp, url, from_cache);
 	if (path == NULL)
 		return NULL;
@@ -169,6 +171,7 @@ struct content_proxy *create_content_proxy(struct content_proxy_settings *cps)
 		return NULL;
 	cp->root = cps->root;
 	cp->cache = cps->cache;
+	cp->index = cps->index;
 	res = pthread_mutex_init(&cp->mutex, NULL);
 	if (res < 0) {
 		free(cp);

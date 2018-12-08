@@ -36,12 +36,14 @@ struct file_data {
 struct content_proxy {
 	char *root;
 	char *cache;
+	char *index;
 	pthread_mutex_t mutex;
 };
 
 struct content_proxy_settings {
 	char *root;
 	char *cache;
+	char *index;
 };
 
 /**
