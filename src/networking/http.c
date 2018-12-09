@@ -176,7 +176,7 @@ double search_weight_from_mime(const char *accept, const char *mime)
 bool is_keep_alive(char *connection)
 {
 	char *KEEP_ALIVE = "keep-alive";
-	/* RFC 2616 8.1.2 if not specified use persistent connection*/
+	/* RFC 7230 6.3 if not specified use persistent connection*/
 	if (connection == NULL)
 		return true;
 	// trim whitespace
