@@ -75,8 +75,15 @@ void destroy_content_proxy(struct content_proxy *cp);
  * get_file_data - thread-safe content retriever by url
  * @cp: content_proxy, manage the access to the file system
  * @url: url of the requested resource
+ * @from_cache: if true look in cache folder instead of root folder
  */
 struct file_data *get_file_data(struct content_proxy *cp, char *url, bool from_cache);
+/**
+ * get_content - retrieve content by url and accept header
+ * @cp: content_proxy, manage the access to the file system
+ * @url: url of the request resource
+ * @accept: accept header value
+ */
 struct file_data *get_content(struct content_proxy *cp, char *url, char *accept);
 
 
