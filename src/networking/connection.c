@@ -113,7 +113,8 @@ int cclose(CONNECTION *connection, int how)
 	int res = 0;
 	if (connection == NULL)
 		return 0;
-	res = shutdown(connection->sock, how);
+	shutdown(connection->sock, how);
+	close(connection->sock);
 	free(connection->write_buf);
 	free(connection->read_buf);
 	sem_destroy(&(connection->wmutex));

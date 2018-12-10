@@ -158,6 +158,7 @@ static int _get_internal(struct server_data *data, bool is_get)
 	if (res < 0) { // here if failed to send 
 		return res;
 	}
+	destroy_file_data(content);
 	return 0;
 }
 
