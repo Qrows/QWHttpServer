@@ -12,4 +12,4 @@ Project for the course of "Ingegneria di internet e del web" for the faculty of 
    * exec "cmake ."
    * exec "make"
    * main executable should have been create at ./build/main
-   * run given a config file, it could be found under ./etc/config inside the repo
+   * run giving it a config file, it could be found under ./etc/config inside the repo
