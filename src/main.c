@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,8 +26,9 @@ int main(int argc, char *argv[])
 	struct server_data **data = NULL;
 	struct global_server_data *global_data = NULL;
 	int res = 0;
-	if (argc < 2) {
-		fprintf(stderr, "%s config\n", *argv);
+	if (argc < 2 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+		fprintf(stderr, "%s %s\n", *argv,
+			"path-to-config-file");
 		return EXIT_FAILURE;
 	}
 	server_open_log(true, true);
