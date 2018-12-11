@@ -18,6 +18,19 @@ static void close_listening_socket(LISTENER_CONNECTION *listener)
 	syslog(LOG_INFO, "%s\n", "listening socket successfully closed");
 }
 
+
+/**
+ * the main function will:
+ * 1. initialize the logger
+ * 2. load and read the config file given by cmd arguments
+ * 3. mask the SIGPIPE signal
+ * 4. open a LISTENER_CONNECTION struct
+ * 5. init the data shared beetween the threads
+ * 6. start the thread
+ * 7. wait for them to finish
+ * 8. free the allocated resource
+ * 9. return
+ */
 int main(int argc, char *argv[])
 {
 	struct config *cfg = NULL;
